@@ -1,25 +1,27 @@
 import cv2
 import numpy as np
+from detect import detect
 from dronekit import connect, VehicleMode, LocationGlobal
 from pymavlink import mavutil
 import time
-import threading
+import queue
+from utils.general import check_requirements
 
 class DroneObjectTracker:
     def __init__(self, connection_string='/dev/ttyAMA0', baud=57600):
         # Initialize drone connection
         self.vehicle = connect(connection_string, baud=baud, wait_ready=True)
         
-        # Camera setup (adjust parameters for your camera)
-        self.camera = cv2.VideoCapture(0)
-        self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-        self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+        # # Camera setup (adjust parameters for your camera)
+        # self.camera = cv2.VideoCapture(0)
+        # self.camera.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+        # self.camera.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
         
-        # Initialize object detection model (using YOLOv4-tiny as example)
-        self.net = cv2.dnn.readNet(
-            "yolov4-tiny.weights",
-            "yolov4-tiny.cfg"
-        )
+        # # Initialize object detection model (using YOLOv4-tiny as example)
+        # self.net = cv2.dnn.readNet(
+        #     "yolov4-tiny.weights",
+        #     "yolov4-tiny.cfg"
+        # )
         
         # Control parameters
         self.image_center_x = 320  # Half of frame width
@@ -27,13 +29,17 @@ class DroneObjectTracker:
         self.pid_yaw = PIDController(kp=0.1, ki=0.01, kd=0.05)
         self.pid_pitch = PIDController(kp=0.1, ki=0.01, kd=0.05)
         
-        # Start tracking thread
-        self.tracking_thread = threading.Thread(target=self.track_object)
-        self.tracking_thread.daemon = True
-        self.tracking_thread.start()
+        # # Start tracking thread
+        # self.tracking_thread = threading.Thread(target=self.track_object)
+        # self.tracking_thread.daemon = True
+        # self.tracking_thread.start()
+        self.track_object()
 
     def detect_objects(self, frame):
-        """Detect objects in frame using YOLO"""
+        """
+        DEPRECTAED, NOT USED
+        Detect objects in frame using YOLO
+        """
         blob = cv2.dnn.blobFromImage(frame, 1/255.0, (416, 416), swapRB=True, crop=False)
         self.net.setInput(blob)
         layer_outputs = self.net.forward(self.net.getUnconnectedOutLayersNames())
@@ -106,13 +112,18 @@ class DroneObjectTracker:
 
     def track_object(self):
         """Main tracking loop"""
+        frameQueue = queue.Queue()
         while True:
-            ret, frame = self.camera.read()
-            if not ret:
-                continue
+            # ret, frame = self.camera.read()
+            # if not ret:
+            #     continue
 
             # Detect objects
-            boxes, confidences, class_ids = self.detect_objects(frame)
+            # boxes, confidences, class_ids = self.detect_objects(frame)
+            check_requirements(exclude=('tensorboard', 'thop'))
+            detect(FrameQueue=frameQueue)
+
+            boxes = frameQueue.get()
             
             if boxes:  # If objects detected
                 # For simplicity, track the first detected object
@@ -124,15 +135,15 @@ class DroneObjectTracker:
                 # Send commands to drone
                 self.send_control_command(yaw_rate, pitch_rate)
                 
-                # Visualize tracking (optional)
-                x, y, w, h = target_box
-                cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
-                cv2.circle(frame, (self.image_center_x, self.image_center_y), 5, (0, 0, 255), -1)
+                # # Visualize tracking (optional)
+                # x, y, w, h = target_box
+                # cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+                # cv2.circle(frame, (self.image_center_x, self.image_center_y), 5, (0, 0, 255), -1)
             
-            # Optional: display frame
-            cv2.imshow('Tracking', frame)
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
+            # # Optional: display frame
+            # cv2.imshow('Tracking', frame)
+            # if cv2.waitKey(1) & 0xFF == ord('q'):
+            #     break
 
     def cleanup(self):
         """Cleanup resources"""
