@@ -1,6 +1,8 @@
 import cv2
 import numpy as np
 from detect import detect
+import collections
+collections.MutableMapping = collections.abc.MutableMapping
 from dronekit import connect, VehicleMode, LocationGlobal
 from pymavlink import mavutil
 import time
@@ -8,7 +10,7 @@ import queue
 from utils.general import check_requirements
 
 class DroneObjectTracker:
-    def __init__(self, connection_string='/dev/ttyAMA0', baud=57600):
+    def __init__(self, connection_string='/dev/ttyAMA0', baud=921000):
         # Initialize drone connection
         self.vehicle = connect(connection_string, baud=baud, wait_ready=True)
         
@@ -180,3 +182,5 @@ if __name__ == "__main__":
             time.sleep(1)
     except KeyboardInterrupt:
         tracker.cleanup()
+
+

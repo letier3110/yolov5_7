@@ -301,9 +301,9 @@ def detect(FrameQueue: queue.Queue):
 #     return opt
 
 
-def main(opt):
+def main():
     check_requirements(exclude=('tensorboard', 'thop'))
-    run(**vars(opt))
+    run()
 
 
 if __name__ == "__main__":
